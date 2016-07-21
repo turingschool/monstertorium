@@ -8,35 +8,24 @@ $newMonsterForm.on('submit', function (event) {
   event.preventDefault();
   var name = $newMonsterName.val();
 
-  // We'll do stuff here.
   Monstertorium.add(name);
 
   $newMonsterName.val('');
-  Monstertorium.render();
 });
 
 $monsterList.on('click', '.monster-levelup', function () {
   var id = $(this).parents('.monster-list-item').attr('id');
-  var monster = Monstertorium.find(id);
-  monster.levelUp();
-  Monstertorium.render();
-  console.log('Level up', monster);
+  Monstertorium.find(id).levelUp();
 });
 
 $monsterList.on('click', '.monster-leveldown', function () {
   var id = $(this).parents('.monster-list-item').attr('id');
-  var monster = Monstertorium.find(id);
-  monster.levelDown();
-  Monstertorium.render();
-  console.log('Level down', monster);
+  Monstertorium.find(id).levelDown();
 });
 
 $monsterList.on('click', '.monster-delete', function () {
   var id = $(this).parents('.monster-list-item').attr('id');
-  var monster = Monstertorium.find(id);
-  monster.delete();
-  Monstertorium.render();
-  console.log('Delete', monster);
+  Monstertorium.find(id).remove();
 });
 
 var Monstertorium = {
@@ -45,55 +34,62 @@ var Monstertorium = {
     this.monsters.push(new Monster(name));
     this.store();
   },
-  find: function (id) {
-    id = parseInt(id);
-    for (var i = 0; i < this.monsters.length; i++) {
-      var monster = this.monsters[i];
-      if (id === monster.id) { return monster }
-    }
-  },
   remove: function (id) {
     id = parseInt(id);
-    var remainingMonsters = [];
-    for (var i = 0; i < this.monsters.length; i++) {
-      var monster = this.monsters[i];
-      if (id !== monster.id) {
-        remainingMonsters.push(monster);
-      }
-    }
-    this.monsters = remainingMonsters;
-    this.store;
+    this.monsters = this.monsters.filter(function (m) {
+      return m.id !== id;
+    });
+    this.store();
+  },
+  find: function (id) {
+    id = parseInt(id);
+    return this.monsters.find(function (m) {
+      return m.id === id;
+    });
   },
   render: function () {
-    $monsterList.html('');
-    for (var i = 0; i < this.monsters.length; i++) {
-      var monster = this.monsters[i];
-      console.log(monster);
-      $monsterList.append(monster.toHTML());
-    }
+    $monsterList.html(this.monsters.map(function (monster) {
+      return monster.toHTML();
+    }));
   },
   store: function () {
     localStorage.setItem('monsters', JSON.stringify(this.monsters));
+    this.render();
   },
-  fetch: function () {
-    var monsters = JSON.parse(localStorage.getItem('monsters'));
-    this.monsters = [];
-    for (var i = 0; i < monsters.length; i++) {
-      var monster = monsters[i];
-      this.monsters.push(new Monster(monster.name, monster.id, monster.level));
+  retrieve: function () {
+    var retrievedMonsters = JSON.parse(localStorage.getItem('monsters'));
+    if (retrievedMonsters) {
+      this.monsters = retrievedMonsters.map(function (m) {
+        return new Monster(m.name, m.id, m.level);
+      });
     }
-    return this.monsters;
   }
 };
 
-function Monster(name, id, level) {
-  this.id = id || Date.now();
+function Monster(name, id = Date.now(), level = 1) {
   this.name = name;
-  this.level = level || 1;
+  this.id = id;
+  this.level = level;
 }
 
+Monster.prototype.levelUp = function () {
+  this.level++;
+  Monstertorium.store();
+};
+
+Monster.prototype.levelDown = function () {
+  if (this.level > 1) {
+    this.level--;
+    Monstertorium.store();
+  }
+};
+
+Monster.prototype.remove = function () {
+  Monstertorium.remove(this.id);
+};
+
 Monster.prototype.toHTML = function () {
-  return $(`
+  return (`
     <article class="monster-list-item" id="${this.id}">
       <h2>${this.name}</h2>
       <p class="monster-level">Level <span class="monster-level-number">${this.level}</span></p>
@@ -107,19 +103,5 @@ Monster.prototype.toHTML = function () {
   `);
 };
 
-Monster.prototype.levelUp = function () {
-  this.level++;
-  Monstertorium.store();
-}
-
-Monster.prototype.levelDown = function () {
-  if (this.level > 1) { this.level--; }
-  Monstertorium.store();
-}
-
-Monster.prototype.delete = function () {
-  Monstertorium.remove(this.id);
-}
-
-Monstertorium.fetch();
+Monstertorium.retrieve();
 Monstertorium.render();
