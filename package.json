@@ -20,7 +20,9 @@
   "homepage": "https://github.com/stevekinney/monstertorium#readme",
   "dependencies": {
     "body-parser": "^1.16.0",
-    "express": "^4.14.1"
+    "express": "^4.14.1",
+    "knex": "^0.15.2",
+    "pg": "^7.4.3"
   },
   "devDependencies": {
     "chai": "^3.5.0",

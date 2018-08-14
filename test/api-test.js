@@ -2,14 +2,20 @@ const assert = require('chai').assert;
 const request = require('supertest');
 const app = require('../server');
 
+const environment = process.env.NODE_ENV || 'test';
+const configuration = require('../knexfile')[environment];
+const database = require('knex')(configuration);
+
 describe('GET /api/v1/monsters', () => {
 
+  let monster = { id: 1, name: 'Steve', level: 2 , created_at: null, updated_at: null}
+
   beforeEach(() => {
-    app.locals.monsters = [{ id: 1, name: 'Steve', level: 2 }];
+    return database('monsters').insert(monster)
   });
 
   afterEach(() => {
-    app.locals.monsters = [];
+    return database('monsters').del()
   });
 
   it('should return a 200 status code', (done) => {
@@ -31,19 +37,21 @@ describe('GET /api/v1/monsters', () => {
 describe('POST /api/v1/monsters', () => {
 
   beforeEach(() => {
-    app.locals.monsters = [];
+    return database('monsters').del()
   });
 
   it('should create a new monster', (done) => {
-    const monster = { id: 1, name: 'Steve', level: 2 };
+    const monster = { name: 'Steve', level: 2 };
 
     request(app)
       .post('/api/v1/monsters')
       .send({ monster: monster })
       .expect(201)
       .end(() => {
-        assert.include(app.locals.monsters, monster);
-        done();
+        database('monsters').where(monster).then((monsters) => {
+          assert.equal(monsters.length, 1);
+          done();
+        })
       });
   });
 });

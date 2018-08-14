@@ -2,6 +2,10 @@ const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
 
+const environment = process.env.NODE_ENV || 'development';
+const configuration = require('./knexfile')[environment];
+const database = require('knex')(configuration);
+
 app.locals.monsters = [];
 
 app.use(express.static('public'));
@@ -12,13 +16,26 @@ app.get('/api/v1/monsters', (request, response) => {
   response.send({ monsters: app.locals.monsters });
 });
 
+app.get('/api/v1/monsters', (request, response) => {
+  database('monsters').select()
+    .then(function(monsters) {
+      response.status(200).json({monsters: monsters});
+    })
+    .catch(function(error) {
+      console.error('somethings wrong with db');
+    });
+});
+
 app.post('/api/v1/monsters', (request, response) => {
   const monster = request.body.monster;
 
-  monster.id = monster.id || Date.now();
-  app.locals.monsters.push(monster);
-
-  response.status(201).send({ monster: monster });
+  database('monsters').returning('*').insert(monster)
+    .then(function(new_monster) {
+      response.status(201).json(new_monster);
+    })
+    .catch(function(error) {
+      console.error(error);
+    })
 });
 
 app.put('/api/v1/monsters/:id', (request, response) => {
